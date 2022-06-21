@@ -1,0 +1,15 @@
+__pycache__/
+venv/
+.idea
+
+/graphs/
+/vocab/
+/source/
+/models/
+/workspace/
+
+cpg.bin
+/glice-study.db
+/hpo.txt
+/split.txt
+/word2vec*
