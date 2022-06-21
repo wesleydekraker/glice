@@ -1,0 +1,7 @@
+numpy
+tensorflow==2.9.1
+dpu-utils==0.6.1
+gensim==4.2.0
+h5py
+sklearn
+optuna==2.10.1

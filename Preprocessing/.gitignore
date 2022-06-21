@@ -1,0 +1,10 @@
+/.bsp
+/domain-classes/target/
+/.idea
+/joern-cli.zip
+/joern-inst
+/plugin.zip
+/project/project/
+/project/target/
+/schema/target/
+/target
