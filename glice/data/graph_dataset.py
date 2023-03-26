@@ -22,7 +22,7 @@ class GraphBatchTFDataDescription(NamedTuple):
 
 class GraphSample(object):
     """Data structure holding information for a single graph."""
-    def __init__(self, adjacency_lists: List[np.ndarray], node_features: np.ndarray):
+    def __init__(self, adjacency_lists: List[np.ndarray], node_features: List[np.ndarray]):
         super().__init__()
         self._adjacency_lists = adjacency_lists
         self._node_features = node_features
@@ -33,7 +33,7 @@ class GraphSample(object):
         return self._adjacency_lists
 
     @property
-    def node_features(self) -> np.ndarray:
+    def node_features(self) -> List[np.ndarray]:
         """Initial node features as ndarray of shape [V, ...]"""
         return self._node_features
 
@@ -190,7 +190,7 @@ class GraphDataset(Generic[GraphSampleType]):
 
     def _finalise_batch(self, raw_batch: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Turns a raw batch into a minibatch ready to be fed to the model (i.e., converts
-        lists to numpy arrays, and concatenate appropriately.
+        lists to numpy arrays, and concatenate appropriately).
 
         Args:
             raw_batch: Holder for the currently constructed minibatch (created by _new_batch,

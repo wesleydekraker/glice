@@ -13,7 +13,7 @@ from .utils import compute_number_of_edge_types, get_tied_edge_types, process_ad
 class JoernGraphSample(GraphSample):
     """Data structure holding a single PPI graph."""
 
-    def __init__(self, adjacency_lists: List[np.ndarray], node_features: np.ndarray, target_value: float):
+    def __init__(self, adjacency_lists: List[np.ndarray], node_features: List[np.ndarray], target_value: float):
         super().__init__(adjacency_lists, node_features)
         self._target_value = target_value
 
@@ -127,7 +127,7 @@ class JoernDataset(GraphDataset[JoernGraphSample]):
 
             label = 0 if graph["label"] == "good" else 1
 
-            final_graph = JoernGraphSample(adjacency_lists, np.array(nodes), label)
+            final_graph = JoernGraphSample(adjacency_lists, nodes, label)
             final_graphs.append(final_graph)
 
         return final_graphs
