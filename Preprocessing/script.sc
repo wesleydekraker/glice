@@ -5,7 +5,7 @@ import io.shiftleft.slice.services.exports.ExportService
     importCode(sourceFolder)
     run.ossdataflow
 
-    val exportService = new ExportService()
+    val exportService = new ExportService(outputFolder)
 
     val graphService = new GraphService(cpg, exportService, depth.toInt, exportMode.contains("slice"))
     graphService.run()

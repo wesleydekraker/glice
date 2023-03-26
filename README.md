@@ -64,7 +64,7 @@ Building and installing plugin - incl. domain classes for schema extension..
 [...]
 ```
 
-Start Joern and perform program slicing:
+Start the interactive Joern shell to perform program slicing:
 ```
 $ cd ..
 $ rm -rf graphs
@@ -75,9 +75,16 @@ $ joern> importCode("source")
 Using generator for language: NEWC: CCpgGenerator
 Creating project `source` for code at `source`
 [...]
+$ joern> opts.slice.targetDepth = 4
 $ joern> run.slice
 The graph has been modified.
 [...]
+```
+
+As an alternative to running the commands above in an interactive shell, you can also use the following command:
+```
+$ ./Preprocessing/joern-inst/joern-cli/joern --script Preprocessing/script.sc \
+  --params sourceFolder=source,outputFolder=graphs,exportMode=slice,depth=4
 ```
 
 The generated graphs are located in the folder "graphs".
