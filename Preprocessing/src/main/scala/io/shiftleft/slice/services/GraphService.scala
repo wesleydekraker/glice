@@ -22,7 +22,7 @@ class GraphService(val cpg: Cpg, val exportService: ExportService, val targetDep
     private def createSlice(originalFile: File): List[CGraph] = {
         val methods = this.shiftLeftService.getMethods(originalFile)
 
-        val graphs = methods.flatMap(method => graphBuilder.build(method))
+        val graphs = methods.flatMap(method => graphBuilder.build(method, Some(originalFile)))
           .sortBy(graph => graph.getProperty(GraphProperty.LINE_NUMBER).toInt)
 
         if (graphs.isEmpty)
@@ -41,7 +41,7 @@ class GraphService(val cpg: Cpg, val exportService: ExportService, val targetDep
 
     private def createGraphs(originalFile: File): List[CGraph] = {
         val methods = this.shiftLeftService.getMethods(originalFile)
-        val graphs = methods.flatMap(method => graphBuilder.build(method))
+        val graphs = methods.flatMap(method => graphBuilder.build(method, Some(originalFile)))
         graphs.foreach(graph => graph.setProperty(GraphProperty.DEPTH, 0.toString))
 
         graphs

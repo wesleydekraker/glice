@@ -92,7 +92,7 @@ class CGraph(val startNodeId: Long) {
   }
 
   def getProperty(key: String): String = {
-    properties(key)
+    properties.getOrElse(key, "")
   }
 
   def startNode(): CNode = {

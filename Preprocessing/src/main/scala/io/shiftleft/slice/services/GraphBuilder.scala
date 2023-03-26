@@ -19,7 +19,7 @@ class GraphBuilder(val cpg: Cpg) {
   private val formatSpecifierCharacter = "%(.)".r
   private val nullCharacter = "\\0"
 
-  def build(method: Method): Option[CGraph] = {
+  def build(method: Method, originalFile: Option[File] = Option.empty): Option[CGraph] = {
     val astNodes = method.get :: method.get.astChildren
 
     val block = astNodes.find(node => node.label() == NodeTypes.BLOCK)
@@ -40,6 +40,9 @@ class GraphBuilder(val cpg: Cpg) {
 
     val newGraph = graph.newGraph()
 
+    if (originalFile.nonEmpty)
+      setFilePath(originalFile.get, newGraph)
+
     setMethodName(method, newGraph)
     setLineNumber(method, newGraph)
     setLabel(method, newGraph)
@@ -47,6 +50,10 @@ class GraphBuilder(val cpg: Cpg) {
     setGeneratedCode(newGraph)
 
     Some(newGraph)
+  }
+
+  private def setFilePath(file: File, graph: CGraph): Unit = {
+    graph.setProperty(GraphProperty.FILE_PATH, file.getAbsolutePath)
   }
 
   private def setMethodName(method: Method, graph: CGraph): Unit = {

@@ -37,6 +37,7 @@ class ExportServiceTests extends BaseTests {
 
     assert(fileContent ==
       """{
+        |  "filePath":"",
         |  "label":"good",
         |  "methodName":"function",
         |  "lineNumber":1,

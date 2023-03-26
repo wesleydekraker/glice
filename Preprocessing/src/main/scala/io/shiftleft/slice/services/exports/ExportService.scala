@@ -15,6 +15,7 @@ class ExportService(private val outFolder: String) {
     }
 
     def writeGraph(graph: CGraph, writeToFile: (File, String) => Unit): Unit = {
+        val filePath = graph.getProperty(GraphProperty.FILE_PATH)
         val label = graph.getProperty(GraphProperty.LABEL)
         val methodName = graph.getProperty(GraphProperty.METHOD_NAME)
         val hash = graph.getProperty(GraphProperty.HASH)
@@ -35,7 +36,7 @@ class ExportService(private val outFolder: String) {
         val reachingDefEdges = getEdges(graph, EdgeType.REACHING_DEF)
         val cdgEdges = getEdges(graph, EdgeType.CDG)
 
-        val jGraph = JGraph(label, methodName, lineNumber, depth, originalCode, generatedCode, nodes,
+        val jGraph = JGraph(filePath, label, methodName, lineNumber, depth, originalCode, generatedCode, nodes,
             astEdges, cfgEdges, reachingDefEdges, cdgEdges)
 
         val jsonString = writePretty(jGraph)
