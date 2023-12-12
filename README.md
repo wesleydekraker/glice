@@ -1,9 +1,10 @@
 # Combining Graph Neural Networks and Program Slicing
 
-Implementation of the GLICE deep learning model.
+Implementation of the GLICE deep learning model. GLICE detects software vulnerabilities by combining graph neural networks and program slicing.
 
-GLICE combines graph neural networks and program slicing. The implementation is inspired by [FUNDED](https://github.com/HuantWang/FUNDED_NISL) which is a deep learning model for detecting vulnerabilities in C/C++ code.
-The graph neural network architecture is based on Microsoft's [tf2-gnn](https://github.com/microsoft/tf2-gnn) repo.
+The implementation is inspired by [FUNDED](https://github.com/HuantWang/FUNDED_NISL) and the graph neural network architecture is based on Microsoft's [tf2-gnn](https://github.com/microsoft/tf2-gnn) repo.
+
+A variant of GLICE, known as MultiGLICE, is designed for multi-class classification. This version can be found in the branch named [feature/multi-class-classifier](https://github.com/wesleydekraker/glice/tree/feature/multi-class-classifier). This branch also extends support to the following programming languages: C#, Java, and PHP.
 
 ## Installation
 
