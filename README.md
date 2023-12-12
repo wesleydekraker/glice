@@ -1,15 +1,14 @@
 # Combining Graph Neural Networks and Program Slicing
 
-Implementation of the GLICE deep learning model.
+Implementation of the MultiGLICE deep learning model. MultiGLICE detects software vulnerabilities by combining graph neural networks and program slicing.
 
-GLICE combines graph neural networks and program slicing. The implementation is inspired by [FUNDED](https://github.com/HuantWang/FUNDED_NISL) which is a deep learning model for detecting vulnerabilities in C/C++ code.
-The graph neural network architecture is based on Microsoft's [tf2-gnn](https://github.com/microsoft/tf2-gnn) repo.
+The implementation is inspired by [FUNDED](https://github.com/HuantWang/FUNDED_NISL) and the graph neural network architecture is based on Microsoft's [tf2-gnn](https://github.com/microsoft/tf2-gnn) repo.
 
 ## Installation
 
-This code was tested in Python 3.8 with TensorFlow 2.9. The operating system used was Ubuntu 20.04.
+This code was tested in Python 3.10 with TensorFlow 2.15. The operating system used was Ubuntu 22.04.
 
-To perform deep learning on the GPU, install CUDA 11.2 and cuDNN 8.1. This will dramatically speed up the process.
+To perform deep learning on the GPU, install CUDA 12.2 and cuDNN 8.9. This will dramatically speed up the process.
 
 The requirements can be installed using pip:
 ```
