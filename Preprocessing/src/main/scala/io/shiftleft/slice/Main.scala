@@ -8,12 +8,11 @@ import scala.reflect.io.Directory
 
 object Main {
   def main(args: Array[String]): Unit = {
-    if (args.length != 3)
-      throw new Exception("Three arguments required: outFolder, slice/func, targetDepth.")
+    if (args.length != 2)
+      throw new Exception("Two arguments required: outFolder, file/method.")
 
     val outFolder = args(0)
-    val createSlices = args(1).contains("slice")
-    val targetDepth = args(2).toInt
+    val mode = args(1)
 
     val graphExportService = new ExportService(outFolder)
 
@@ -27,7 +26,7 @@ object Main {
         val cpgGenerator = new CpgGenerator(folder, cpgFilePath)
         val cpg = cpgGenerator.createCpg(overwriteExistingCpg = true)
 
-        val graphService = new GraphService(cpg, graphExportService, targetDepth, createSlices)
+        val graphService = new GraphService(cpg, graphExportService, mode)
         graphService.run()
 
         cpg.close()

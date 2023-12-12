@@ -91,6 +91,14 @@ class GraphDataset(Generic[GraphSampleType]):
         pass
 
     @abstractmethod
+    def get_filenames(self, data_fold: DataFold) -> list[str]:
+        pass
+
+    @abstractmethod
+    def shuffle(self, data_fold: DataFold):
+        pass
+
+    @abstractmethod
     def _graph_iterator(self, data_fold: DataFold) -> Iterator[GraphSampleType]:
         """Returns iterator over data in specified fold of the dataset.
         Note: The iterator is expected to shuffle training data on every call.

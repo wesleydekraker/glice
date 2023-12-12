@@ -20,14 +20,11 @@ class ExportService(private val outFolder: String) {
         val methodName = graph.getProperty(GraphProperty.METHOD_NAME)
         val hash = graph.getProperty(GraphProperty.HASH)
         val lineNumber = graph.getProperty(GraphProperty.LINE_NUMBER).toInt
-        val depth = graph.getProperty(GraphProperty.DEPTH).toInt
 
         val originalCode = graph.getProperty(GraphProperty.ORIGINAL_CODE)
           .replace("\t", "  ")
           .split("\n")
           .toList
-
-        val generatedCode = graph.getProperty(GraphProperty.GENERATED_CODE).split("\n").toList
 
         val nodes = getNodes(graph)
 
@@ -36,7 +33,7 @@ class ExportService(private val outFolder: String) {
         val reachingDefEdges = getEdges(graph, EdgeType.REACHING_DEF)
         val cdgEdges = getEdges(graph, EdgeType.CDG)
 
-        val jGraph = JGraph(filePath, label, methodName, lineNumber, depth, originalCode, generatedCode, nodes,
+        val jGraph = JGraph(filePath, label, methodName, lineNumber, originalCode, nodes,
             astEdges, cfgEdges, reachingDefEdges, cdgEdges)
 
         val jsonString = writePretty(jGraph)
@@ -45,7 +42,7 @@ class ExportService(private val outFolder: String) {
         if (!directory.exists())
             directory.mkdir()
 
-        val outFile = Paths.get(outFolder, s"$hash-depth$depth-$label.txt").toFile
+        val outFile = Paths.get(outFolder, s"$hash-$label.txt").toFile
 
         writeToFile(outFile, jsonString)
     }

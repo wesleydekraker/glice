@@ -6,7 +6,7 @@ import io.shiftleft.slice.services.exports.ExportService
 
 import java.io.File
 
-class GraphService(val cpg: Cpg, val exportService: ExportService, val targetDepth: Int, val createSlices: Boolean) {
+class GraphService(val cpg: Cpg, val exportService: ExportService, val mode: String) {
     private val shiftLeftService = new ShiftLeftService(cpg)
     private val graphBuilder = new GraphBuilder(cpg)
 
@@ -14,12 +14,12 @@ class GraphService(val cpg: Cpg, val exportService: ExportService, val targetDep
         val files = shiftLeftService.getFiles()
 
         for (originalFile <- files) {
-            val slice = if (createSlices) createSlice(originalFile) else createGraphs(originalFile)
+            val slice = if (mode == "file") createFile(originalFile) else createMethods(originalFile)
             slice.foreach(slice => exportService.writeGraph(slice))
         }
     }
 
-    private def createSlice(originalFile: File): List[CGraph] = {
+    private def createFile(originalFile: File): List[CGraph] = {
         val methods = this.shiftLeftService.getMethods(originalFile)
 
         val graphs = methods.flatMap(method => graphBuilder.build(method, Some(originalFile)))
@@ -30,19 +30,16 @@ class GraphService(val cpg: Cpg, val exportService: ExportService, val targetDep
 
         val firstGraph = graphs.head
 
-        for (graph <- graphs.tail.take(targetDepth)) {
+        for (graph <- graphs.tail) {
             firstGraph.appendGraph(graph)
         }
-
-        firstGraph.setProperty(GraphProperty.DEPTH, (graphs.length - 1).toString)
 
         List(firstGraph)
     }
 
-    private def createGraphs(originalFile: File): List[CGraph] = {
+    private def createMethods(originalFile: File): List[CGraph] = {
         val methods = this.shiftLeftService.getMethods(originalFile)
         val graphs = methods.flatMap(method => graphBuilder.build(method, Some(originalFile)))
-        graphs.foreach(graph => graph.setProperty(GraphProperty.DEPTH, 0.toString))
 
         graphs
     }

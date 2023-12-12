@@ -1,7 +1,8 @@
 numpy
-tensorflow==2.9.1
+tensorflow==2.15.0.post1
 dpu-utils==0.6.1
 gensim==4.2.0
+fasttext
 h5py
-sklearn
-optuna==2.10.1
+scikit-learn
+optuna==3.5.0

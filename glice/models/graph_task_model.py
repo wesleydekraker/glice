@@ -1,6 +1,6 @@
 import time
 from abc import abstractmethod
-from typing import Tuple, List, Dict, Optional, Any, Iterable, Union
+from typing import Tuple, List, Dict, Optional, Any, Iterable, Union, Callable
 
 import tensorflow as tf
 
@@ -192,7 +192,8 @@ class GraphTaskModel(tf.keras.Model):
         pass
 
     @abstractmethod
-    def compute_epoch_metrics(self, task_results: List[Any]) -> Tuple[float, str]:
+    def compute_epoch_metrics(self, task_results: List[Any], filenames: list[str], log_metrics_fun: Callable,
+                              fold: str) -> Tuple[float, str]:
         """Compute single value used to measure quality of model at one epoch, where
         lower is better.
         This value, computed on the validation set, is used to determine if model
@@ -201,6 +202,9 @@ class GraphTaskModel(tf.keras.Model):
         Args:
             task_results: List of results obtained by compute_task_metrics for the
                 batches in one epoch.
+            filenames:
+            log_metrics_fun: Callable to store metrics
+            fold: The fold metrics are computed over
 
         Returns:
             Pair of a metric value (lower ~ better) and a human-readable string

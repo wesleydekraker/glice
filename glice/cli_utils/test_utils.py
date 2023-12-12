@@ -1,18 +1,11 @@
-import json
-import os
-import random
 import time
-from typing import Optional, Callable, Any
+from typing import Callable, Dict
 
 import numpy as np
-import tensorflow as tf
-from tensorflow.python.training.tracking import data_structures as tf_data_structures
 
-from .split_utils import split
-from ..data import DataFold, GraphDataset
-from ..layers import get_known_message_passing_classes
+from ..data import DataFold, JoernDataset
 from ..models import GraphTaskModel
-from .model_utils import save_model, load_weights_verbosely, get_model_and_dataset
+from .model_utils import get_model_and_dataset
 
 
 def run_test_from_args(args) -> None:
@@ -25,11 +18,17 @@ def run_test_from_args(args) -> None:
     test(model, dataset, lambda msg: print(msg))
 
 
-def test(model: GraphTaskModel, dataset: GraphDataset, log_fun: Callable[[str], None]):
+def test(model: GraphTaskModel, dataset: JoernDataset, log_fun: Callable[[str], None]):
     log_fun("== Running on test dataset")
     test_data = dataset.get_tensorflow_dataset(DataFold.TEST)
     _, _, test_results = model.run_one_epoch(test_data, training=False)
-    _, test_metric_string = model.compute_epoch_metrics(test_results)
+
+    def log_metrics(metrics: Dict[str, int], _: str):
+        for filename, label in metrics.items():
+            print(f"{filename}:{label}")
+
+    _, test_metric_string = model.compute_epoch_metrics(test_results, dataset.get_filenames(DataFold.TEST), log_metrics,
+                                                        "test")
     log_fun(test_metric_string)
 
 

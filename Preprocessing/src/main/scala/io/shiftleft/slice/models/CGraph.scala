@@ -75,14 +75,6 @@ class CGraph(val startNodeId: Long) {
       .toList
   }
 
-  def getEdgeTypes(): Set[String] = {
-    edgesByType.keys.toSet
-  }
-
-  def getAstEdges(node: CNode): List[CNode] = {
-    astEdges.getOrElse(node.id, new ListBuffer()).map(edge => nodesById(edge.to)).toList
-  }
-
   def nodes: List[CNode] = {
     nodesById.values.toList
   }
@@ -95,10 +87,6 @@ class CGraph(val startNodeId: Long) {
     properties.getOrElse(key, "")
   }
 
-  def startNode(): CNode = {
-    nodesById(startNodeId)
-  }
-
   def appendGraph(graph: CGraph): Unit = {
     val offsetNodeId = nodesById.size
     val nodes = graph.nodes.map(node => CNode(node.id + offsetNodeId, node.nodeType, node.value))
@@ -107,9 +95,6 @@ class CGraph(val startNodeId: Long) {
 
     val newOriginalCode = getProperty(GraphProperty.ORIGINAL_CODE) + graph.getProperty(GraphProperty.ORIGINAL_CODE)
     setProperty(GraphProperty.ORIGINAL_CODE, newOriginalCode)
-
-    val newGeneratedCode = getProperty(GraphProperty.GENERATED_CODE) + graph.getProperty(GraphProperty.GENERATED_CODE)
-    setProperty(GraphProperty.GENERATED_CODE, newGeneratedCode)
 
     appendNodes(nodes)
     appendEdges(edges)

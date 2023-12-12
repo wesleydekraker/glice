@@ -1,12 +1,10 @@
-import json
 import os
 import random
 import time
-from typing import Optional, Callable, Any
+from typing import Optional, Callable, Dict
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.training.tracking import data_structures as tf_data_structures
 
 from .split_utils import split
 from ..data import DataFold, GraphDataset
@@ -26,14 +24,20 @@ def make_run_id(model_name: str, task_name: str, run_name: Optional[str] = None)
 def log_line(log_file: str, msg: str):
     with open(log_file, "a") as log_fh:
         log_fh.write(msg + "\n")
+
     print(msg)
 
 
-def train_loop(model: GraphTaskModel, train_data: tf.data.Dataset, valid_data: tf.data.Dataset, max_epochs: int,
-               patience: int, log_fun: Callable[[str], None],
+def train_loop(model: GraphTaskModel, dataset: GraphDataset, max_epochs: int,
+               patience: int, log_fun: Callable[[str], None], log_metrics_fun: Callable,
                save_model_fun: Callable[[GraphTaskModel], None], pruner) -> dict:
+    train_data = dataset.get_tensorflow_dataset(DataFold.TRAIN).prefetch(3)
+    valid_data = dataset.get_tensorflow_dataset(DataFold.VALIDATION).prefetch(3)
+
     initial_valid_loss, _, initial_valid_results = model.run_one_epoch(valid_data, training=False)
-    best_valid_metric, best_val_str = model.compute_epoch_metrics(initial_valid_results)
+    best_valid_metric, best_val_str = model.compute_epoch_metrics(initial_valid_results,
+                                                                  dataset.get_filenames(DataFold.VALIDATION),
+                                                                  log_metrics_fun, "valid")
     log_fun(f"Initial valid metric: {best_val_str}.")
     save_model_fun(model)
     best_valid_epoch = 0
@@ -43,11 +47,16 @@ def train_loop(model: GraphTaskModel, train_data: tf.data.Dataset, valid_data: t
 
     for epoch in range(1, max_epochs + 1):
         log_fun(f"== Epoch {epoch}")
+        dataset.shuffle(DataFold.TRAIN)
         train_loss, train_speed, train_results = model.run_one_epoch(train_data, training=True)
-        train_metric, train_metric_string = model.compute_epoch_metrics(train_results)
+        train_metric, train_metric_string = model.compute_epoch_metrics(train_results,
+                                                                        dataset.get_filenames(DataFold.TRAIN),
+                                                                        log_metrics_fun, "train")
         log_fun(f" Train:  {train_loss:.4f} loss | {train_metric_string} | {train_speed:.2f} graphs/s")
         valid_loss, valid_speed, valid_results = model.run_one_epoch(valid_data, training=False)
-        valid_metric, valid_metric_string = model.compute_epoch_metrics(valid_results)
+        valid_metric, valid_metric_string = model.compute_epoch_metrics(valid_results,
+                                                                        dataset.get_filenames(DataFold.VALIDATION),
+                                                                        log_metrics_fun, "valid")
         log_fun(f" Valid:  {valid_loss:.4f} loss | {valid_metric_string} | {valid_speed:.2f} graphs/s")
 
         if pruner is not None:
@@ -55,8 +64,8 @@ def train_loop(model: GraphTaskModel, train_data: tf.data.Dataset, valid_data: t
 
         # Save if good enough.
         if valid_metric < best_valid_metric or (valid_metric == best_valid_metric and valid_loss < best_valid_loss):
-            log_fun(f"  (Best epoch so far, "
-                    f"target metric decreased to {valid_metric:.4f} from {best_valid_metric:.4f}.)")
+            log_fun(f"  (Best epoch so far, target metric decreased to "
+                    f"{valid_metric:.4f} from {best_valid_metric:.4f}.)")
             save_model_fun(model)
             best_valid_metric = valid_metric
             best_valid_epoch = epoch
@@ -75,29 +84,19 @@ def train_loop(model: GraphTaskModel, train_data: tf.data.Dataset, valid_data: t
     return dict(best_valid_metric=best_valid_metric, best_valid_loss=best_valid_loss, best_train_speed=best_train_speed)
 
 
-def train(model: GraphTaskModel, dataset: GraphDataset, log_fun: Callable[[str], None], run_id: str, max_epochs: int,
-          patience: int, save_dir: str, pruner: Callable):
-    train_data = dataset.get_tensorflow_dataset(DataFold.TRAIN).prefetch(3)
-    valid_data = dataset.get_tensorflow_dataset(DataFold.VALIDATION).prefetch(3)
+def train(model: GraphTaskModel, dataset: GraphDataset, log_fun: Callable[[str], None],
+          log_metrics_fun: Callable, run_id: str, max_epochs: int, patience: int, save_dir: str,
+          pruner: Callable):
 
     save_file = os.path.join(save_dir, f"{run_id}_best.pkl")
 
     def save_model_fun(model: GraphTaskModel):
         save_model(save_file, model, dataset)
 
-    train_metrics = train_loop(model, train_data, valid_data, max_epochs=max_epochs, patience=patience, log_fun=log_fun,
-                               save_model_fun=save_model_fun, pruner=pruner)
+    train_metrics = train_loop(model, dataset, max_epochs=max_epochs, patience=patience, log_fun=log_fun,
+                               log_metrics_fun=log_metrics_fun, save_model_fun=save_model_fun, pruner=pruner)
 
     return train_metrics, save_file
-
-
-def unwrap_tf_tracked_data(data: Any) -> Any:
-    if isinstance(data, (tf_data_structures.ListWrapper, list)):
-        return [unwrap_tf_tracked_data(e) for e in data]
-    elif isinstance(data, (tf_data_structures._DictWrapper, dict)):
-        return {k: unwrap_tf_tracked_data(v) for k, v in data.items()}
-    else:
-        return data
 
 
 def run_train_from_args(args, pruner=None) -> dict:
@@ -106,9 +105,30 @@ def run_train_from_args(args, pruner=None) -> dict:
     # Get the housekeeping going and start logging:
     os.makedirs(args.save_dir, exist_ok=True)
     run_id = make_run_id(args.model, task, args.run_name)
+    metrics_map = {}
+
+    def log_metrics(metrics: Dict[str, int], fold: str):
+        metrics_file = os.path.join(args.save_dir, f"{run_id}_{fold}.log")
+
+        if not os.path.exists(metrics_file) or fold not in metrics_map:
+            filenames = list(metrics.keys())
+            metrics_map[fold] = filenames
+
+            with open(metrics_file, "w") as f:
+                f.write(",".join(filenames) + "\n")
+
+        filenames = metrics_map[fold]
+
+        with open(metrics_file, "a") as f:
+            for filename in filenames:
+                if filename == filenames[-1]:
+                    f.write(str(metrics[filename]) + "\n")
+                else:
+                    f.write(str(metrics[filename]) + ",")
+
     log_file = os.path.join(args.save_dir, f"{run_id}.log")
 
-    def log(msg):
+    def log(msg: str):
         log_line(log_file, msg)
 
     log(f"Setting random seed {args.random_seed}.")
@@ -127,11 +147,12 @@ def run_train_from_args(args, pruner=None) -> dict:
                                            load_weights_only=args.load_weights_only,
                                            disable_tf_function_build=args.disable_tf_func)
 
-    log(f"Dataset parameters: {json.dumps(unwrap_tf_tracked_data(dataset._params))}")
-    log(f"Model parameters: {json.dumps(unwrap_tf_tracked_data(model._params))}")
+    log(f"Dataset parameters: {dataset._params}")
+    log(f"Model parameters: {model._params}")
 
-    train_metrics, trained_model_path = train(model, dataset, log_fun=log, run_id=run_id, max_epochs=args.max_epochs,
-                                              patience=args.patience, save_dir=args.save_dir, pruner=pruner)
+    train_metrics, trained_model_path = train(model, dataset, log_fun=log, log_metrics_fun=log_metrics, run_id=run_id,
+                                              max_epochs=args.max_epochs, patience=args.patience,
+                                              save_dir=args.save_dir, pruner=pruner)
 
     if args.run_test:
         log("== Running on test dataset")
@@ -142,7 +163,8 @@ def run_train_from_args(args, pruner=None) -> dict:
 
         test_data = dataset.get_tensorflow_dataset(DataFold.TEST)
         _, _, test_results = model.run_one_epoch(test_data, training=False)
-        _, test_metric_string = model.compute_epoch_metrics(test_results)
+        _, test_metric_string = model.compute_epoch_metrics(test_results, dataset.get_filenames(DataFold.TEST),
+                                                            log_metrics, "test")
         log(f" Test:  {test_metric_string}")
 
     return train_metrics

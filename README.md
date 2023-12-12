@@ -84,7 +84,7 @@ The graph has been modified.
 As an alternative to running the commands above in an interactive shell, you can also use the following command:
 ```
 $ ./Preprocessing/joern-inst/joern-cli/joern --script Preprocessing/script.sc \
-  --params sourceFolder=source,outputFolder=graphs,exportMode=slice,depth=4
+  --params sourceFolder=source,outputFolder=graphs,exportMode=method
 ```
 
 The generated graphs are located in the folder "graphs".

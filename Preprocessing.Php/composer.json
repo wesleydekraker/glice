@@ -1,0 +1,6 @@
+{
+    "name": "php/ast-generator",
+    "require": {
+        "nikic/php-parser": "^4.15"
+    }
+}

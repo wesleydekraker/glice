@@ -23,7 +23,7 @@ object Slice {
     * Option object initialize to defaults. This object will be made
     * accessible to the user via `opts.slice`.
     * */
-  def defaultOpts: SliceOpts = SliceOpts(outFolder = "graphs", targetDepth = 99999, createSlices = true)
+  def defaultOpts: SliceOpts = SliceOpts(outFolder = "graphs", mode = "method")
 }
 
 /**
@@ -32,7 +32,7 @@ object Slice {
   * we use the option class below to pass the slicing criterion
   * from the user to the extension.
   * */
-case class SliceOpts(var outFolder: String, var targetDepth: Int, var createSlices: Boolean)
+case class SliceOpts(var outFolder: String, var mode: String)
   extends LayerCreatorOptions {}
 
 class Slice(options: SliceOpts) extends LayerCreator {
@@ -50,7 +50,7 @@ class Slice(options: SliceOpts) extends LayerCreator {
   def run(cpg: Cpg): Unit = {
     val exportService = new ExportService(options.outFolder)
 
-    val graphService = new GraphService(cpg, exportService, options.targetDepth, options.createSlices)
+    val graphService = new GraphService(cpg, exportService, options.mode)
     graphService.run()
   }
 }

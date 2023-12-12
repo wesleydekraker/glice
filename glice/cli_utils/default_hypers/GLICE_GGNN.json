@@ -1,19 +1,26 @@
 {
     "task_params": {
-        "max_nodes_per_batch": 10000,
-        "add_self_loop_edges": true,
-        "tie_fwd_bkwd_edges": false
+        "add_cdg_edges": false,
+        "add_cfg_edges": true,
+        "add_next_edges": true,
+        "add_reaching_def_edges": true,
+        "add_self_loop_edges": false,
+        "max_nodes_per_batch": 20000,
+        "tie_fwd_bkwd_edges": false,
+        "w2v_vector_size": 100,
+        "w2v_window": 10
     },
     "model_params": {
-        "gnn_dense_every_num_layers": 3,
+        "gnn_dense_every_num_layers": 5,
         "gnn_dense_intermediate_layer_activation": "tanh",
-        "gnn_hidden_dim": 128,
+        "gnn_hidden_dim": 64,
         "gnn_initial_node_representation_activation": "tanh",
-        "gnn_layer_input_dropout_rate": 0.3,
-        "gnn_message_activation_function": "leaky_relu",
-        "gnn_num_layers": 3,
+        "gnn_layer_input_dropout_rate": 0.0,
+        "gnn_message_activation_function": "relu",
+        "gnn_num_layers": 7,
         "gnn_residual_every_num_layers": 2,
         "graph_aggregation_num_heads": 8,
-        "optimizer": "Adam"
+        "optimizer": "Adam",
+        "learning_rate": 0.0001
     }
 }

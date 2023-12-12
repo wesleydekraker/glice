@@ -1,7 +1,7 @@
 package io.shiftleft.slice
 
 import io.shiftleft.slice.services.exports.ExportService
-import io.shiftleft.slice.models.{CEdge, CGraph, CNode, EdgeType, GraphLabel, GraphProperty, NodeType}
+import io.shiftleft.slice.models.{CEdge, CGraph, CNode, EdgeType, GraphProperty, NodeType}
 
 import java.io.File
 
@@ -19,12 +19,10 @@ class ExportServiceTests extends BaseTests {
     graph.appendNodes(nodes)
     graph.appendEdges(edges)
 
-    graph.setProperty(GraphProperty.LABEL, GraphLabel.GOOD)
+    graph.setProperty(GraphProperty.LABEL, "unknown")
     graph.setProperty(GraphProperty.METHOD_NAME, "function")
     graph.setProperty(GraphProperty.LINE_NUMBER, 1.toString)
-    graph.setProperty(GraphProperty.DEPTH, 1.toString)
     graph.setProperty(GraphProperty.ORIGINAL_CODE, "function x\n{\n}\n")
-    graph.setProperty(GraphProperty.GENERATED_CODE, "function x\n{\n}\n")
     graph.setProperty(GraphProperty.HASH, "HASH")
 
     var fileContent = ""
@@ -38,16 +36,10 @@ class ExportServiceTests extends BaseTests {
     assert(fileContent ==
       """{
         |  "filePath":"",
-        |  "label":"good",
+        |  "label":"unknown",
         |  "methodName":"function",
         |  "lineNumber":1,
-        |  "depth":1,
         |  "originalCode":[
-        |    "function x",
-        |    "{",
-        |    "}"
-        |  ],
-        |  "generatedCode":[
         |    "function x",
         |    "{",
         |    "}"

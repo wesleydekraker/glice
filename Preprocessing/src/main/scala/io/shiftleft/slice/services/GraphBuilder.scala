@@ -16,8 +16,6 @@ import scala.io.Source
 class GraphBuilder(val cpg: Cpg) {
   private val messageDigest: MessageDigest = MessageDigest.getInstance("SHA-256")
   private val arrayTypePattern = "(.*)\\[(.*)\\]".r
-  private val formatSpecifierCharacter = "%(.)".r
-  private val nullCharacter = "\\0"
 
   def build(method: Method, originalFile: Option[File] = Option.empty): Option[CGraph] = {
     val astNodes = method.get :: method.get.astChildren
@@ -45,9 +43,8 @@ class GraphBuilder(val cpg: Cpg) {
 
     setMethodName(method, newGraph)
     setLineNumber(method, newGraph)
-    setLabel(method, newGraph)
+    setLabel(newGraph)
     setCode(method, newGraph)
-    setGeneratedCode(newGraph)
 
     Some(newGraph)
   }
@@ -57,34 +54,15 @@ class GraphBuilder(val cpg: Cpg) {
   }
 
   private def setMethodName(method: Method, graph: CGraph): Unit = {
-    graph.setProperty(GraphProperty.METHOD_NAME, method.name)
+    graph.setProperty(GraphProperty.METHOD_NAME, method.fullName)
   }
 
   private def setLineNumber(method: Method, graph: CGraph): Unit = {
     graph.setProperty(GraphProperty.LINE_NUMBER, method.lineNumber.get.toString)
   }
 
-  private def setLabel(method: Method, graph: CGraph): Unit = {
-    val methodNameLower = method.name.toLowerCase
-    var labelName = GraphLabel.UNKNOWN
-
-    val isGoodFile = method.filename.contains(f"-${GraphLabel.GOOD}.")
-    val isBadFile = method.filename.contains(f"-${GraphLabel.BAD}.")
-
-    val isGoodMethod = methodNameLower.contains(GraphLabel.GOOD)
-    val isBadMethod = methodNameLower.contains(GraphLabel.BAD)
-
-    if (isGoodFile && !isBadFile) {
-      labelName = GraphLabel.GOOD
-    } else if (isBadFile && !isGoodFile) {
-      labelName = GraphLabel.BAD
-    } else if (isGoodMethod && !isBadMethod) {
-      labelName = GraphLabel.GOOD
-    } else if (isBadMethod && !isGoodMethod) {
-      labelName = GraphLabel.BAD
-    }
-
-    graph.setProperty(GraphProperty.LABEL, labelName)
+  private def setLabel(graph: CGraph): Unit = {
+    graph.setProperty(GraphProperty.LABEL, "unknown")
   }
 
   private def setCode(method: Method, graph: CGraph): Unit = {
@@ -109,10 +87,6 @@ class GraphBuilder(val cpg: Cpg) {
 
     val hash = createSha256Hash(new File(method.filename).getPath, code)
     graph.setProperty(GraphProperty.HASH, hash)
-  }
-
-  private def setGeneratedCode(graph: CGraph): Unit = {
-    graph.setProperty(GraphProperty.GENERATED_CODE, new SourceCodeGenerator(graph).toCode())
   }
 
   private def createSha256Hash(inputStrings: String*): String = {
@@ -196,8 +170,7 @@ class GraphBuilder(val cpg: Cpg) {
       }
     }
 
-    val methodName = if (isInnerFunction) name else ""
-    graph.appendNode(CNode(node.id, NodeType.METHOD, methodName))
+    graph.appendNode(CNode(node.id, NodeType.METHOD, name))
   }
 
   private def block(node: Node, context: BuildContext): Unit = {
@@ -360,33 +333,13 @@ class GraphBuilder(val cpg: Cpg) {
 
     if (code.contains("\"")) {
       val firstChar = code.indexOf("\"")
-      val stringLiteral = code.slice(firstChar + 1, code.length - 1)
-      graph.appendNode(CNode(node.id(), NodeType.STRING_LITERAL))
-
-      val formatSpecifiers = formatSpecifierCharacter.findAllIn(stringLiteral)
-
-      for (formatSpecifier <- formatSpecifiers) {
-        val formatSpecifierId = context.getNewId
-
-        graph.appendNode(CNode(formatSpecifierId, NodeType.STRING_FORMAT_SPECIFIER, formatSpecifier))
-        graph.appendEdge(CEdge(node.id(), formatSpecifierId, EdgeType.AST))
-      }
-
-      if (stringLiteral.contains(nullCharacter)) {
-        val nullCharacterId = context.getNewId
-
-        graph.appendNode(CNode(nullCharacterId, NodeType.STRING_NULL_CHARACTER))
-        graph.appendEdge(CEdge(node.id(), nullCharacterId, EdgeType.AST))
-      }
-
-      val stringLengthId = context.getNewId
-      graph.appendNode(CNode(stringLengthId, NodeType.STRING_LENGTH, stringLiteral.length.toString))
-      graph.appendEdge(CEdge(node.id(), stringLengthId, EdgeType.AST))
+      val value = code.slice(firstChar + 1, code.length - 1)
+      graph.appendNode(CNode(node.id(), NodeType.STRING_LITERAL, value))
 
     } else if (code.contains("\'")) {
       val firstChar = code.indexOf("\'")
-      val stringLiteral = code.slice(firstChar + 1, code.length - 1)
-      graph.appendNode(CNode(node.id(), NodeType.STRING_LITERAL, stringLiteral))
+      val value = code.slice(firstChar + 1, code.length - 1)
+      graph.appendNode(CNode(node.id(), NodeType.STRING_LITERAL, value))
     } else {
       graph.appendNode(CNode(node.id(), NodeType.NUMERIC_LITERAL, code))
     }

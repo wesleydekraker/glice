@@ -1,5 +1,7 @@
 import json
+import os
 from functools import partial
+from io import StringIO
 
 import optuna
 from optuna import Study, Trial, TrialPruned
@@ -7,12 +9,14 @@ from optuna.trial import TrialState
 
 from glice.cli_utils import run_train_from_args
 
+hpo_file = "hpo.db"
+
 
 def run_hpo_from_args(args) -> None:
     study_name = "glice-study"
     storage_name = f"sqlite:///{study_name}.db"
 
-    pruner = optuna.pruners.MedianPruner(n_startup_trials=10, n_warmup_steps=5, interval_steps=1)
+    pruner = optuna.pruners.MedianPruner(n_startup_trials=10, n_warmup_steps=5)
     study = optuna.create_study(study_name=study_name, storage=storage_name, direction="minimize", load_if_exists=True,
                                 pruner=pruner)
     study.optimize(partial(objective, args), n_trials=1, catch=(RuntimeError,))
@@ -23,7 +27,7 @@ def print_stats(study: Study):
     pruned_trials = study.get_trials(deepcopy=False, states=(TrialState.PRUNED,))
     complete_trials = study.get_trials(deepcopy=False, states=(TrialState.COMPLETE,))
 
-    with open("hpo.txt", "w") as f:
+    with open(hpo_file, "w") as f:
         f.write("Study statistics:\n")
         f.write(f"  Number of finished trials: {len(study.trials)}\n")
         f.write(f"  Number of pruned trials: {len(pruned_trials)}\n")
@@ -38,15 +42,20 @@ def print_stats(study: Study):
 
 def write_trial(trial, f, header="Trial"):
     f.write(f"{header}:\n")
-
     f.write(f"  Value: {trial.value}\n")
+    write_trial_params(trial, f)
+    write_trial_attributes(trial, f)
 
+def write_trial_params(trial, f):
     f.write("  Params: \n")
-    for key, value in trial.params.items():
+    for key in sorted(trial.params):
+        value = trial.params[key]
         f.write(f"    {key}: {value}\n")
 
+def write_trial_attributes(trial, f):
     f.write("  Attributes: \n")
-    for key, value in trial.user_attrs.items():
+    for key in sorted(trial.user_attrs):
+        value = trial.user_attrs[key]
         f.write(f"    {key}: {value}\n")
 
 
@@ -56,15 +65,40 @@ def objective(args, trial: Trial):
         suggest_categorical(trial, "gnn_hidden_dim", [4, 8, 16, 32, 64, 128, 256]),
         suggest_categorical(trial, "gnn_initial_node_representation_activation", ["tanh", "relu", "leaky_relu"]),
         suggest_categorical(trial, "gnn_dense_intermediate_layer_activation", ["tanh", "relu", "leaky_relu"]),
-        suggest_int(trial, "gnn_residual_every_num_layers", 2, 4),
-        suggest_int(trial, "gnn_num_layers", 3, 6),
-        suggest_float(trial, "gnn_layer_input_dropout_rate", 0.1, 0.5, step=0.1),
-        suggest_int(trial, "gnn_dense_every_num_layers", 2, 4),
+        suggest_int(trial, "gnn_residual_every_num_layers", 2, 8),
+        suggest_int(trial, "gnn_num_layers", 2, 8),
+        suggest_float(trial, "gnn_layer_input_dropout_rate", 0.0, 0.5, step=0.1),
+        suggest_int(trial, "gnn_dense_every_num_layers", 2, 8),
         suggest_categorical(trial, "optimizer", ["SGD", "RMSProp", "Adam"]),
-        suggest_categorical(trial, "graph_aggregation_num_heads", [4, 8, 16])
+        suggest_categorical(trial, "graph_aggregation_num_heads", [4, 8, 16, 32]),
+        suggest_categorical(trial, "message_calculation_class", ["GGNN", "GNN_Edge_MLP", "GNN_FiLM", "RGAT", "RGCN", "RGIN"])
     ]
 
     args.model_param_override = json.dumps(dict(model_params))
+
+    data_params = [
+        suggest_categorical(trial, "max_nodes_per_batch", [5000, 10000, 20000]),
+        suggest_bool(trial, "add_self_loop_edges"),
+        suggest_bool(trial, "add_cfg_edges"),
+        suggest_bool(trial, "add_reaching_def_edges"),
+        suggest_bool(trial, "add_cdg_edges"),
+        suggest_bool(trial, "add_next_edges"),
+        suggest_bool(trial, "tie_fwd_bkwd_edges"),
+        suggest_categorical(trial, "w2v_window", [10, 100]),
+        suggest_categorical(trial, "w2v_vector_size", [1, 50, 100]),
+    ]
+
+    args.data_param_override = json.dumps(dict(data_params))
+
+    if os.path.exists(hpo_file):
+        with open(hpo_file, "r") as f:
+            hpo = f.read()
+
+        trial_params = StringIO()
+        write_trial_params(trial, trial_params)
+
+        if trial_params.getvalue() in hpo:
+            raise optuna.exceptions.TrialPruned()
 
     try:
         metrics = run_train_from_args(args, pruner=partial(pruner_func, trial))
@@ -96,3 +130,7 @@ def suggest_int(trial, name, low, high, step=1):
 
 def suggest_float(trial, name, low, high, step):
     return name, trial.suggest_float(name, low, high, step=step)
+
+
+def suggest_bool(trial, name):
+    return name, trial.suggest_categorical(name, [False, True])

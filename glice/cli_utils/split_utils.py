@@ -1,6 +1,10 @@
+import json
 import os
 
-from sklearn.model_selection import KFold, train_test_split
+from sklearn.model_selection import train_test_split, StratifiedKFold
+
+from glice import DataFold
+from glice.data.joern_dataset import get_label, get_language
 
 
 def split(data_dir: str, split_file: str = "split.txt"):
@@ -9,43 +13,32 @@ def split(data_dir: str, split_file: str = "split.txt"):
         return
 
     filenames = os.listdir(data_dir)
-    bad_filenames = []
-    good_filenames = []
+    labels = []
 
     for filename in filenames:
-        part = filename.replace(".txt", "")
-        label = part.split("-")[-1]
+        with open(os.path.join(data_dir, filename), "r") as f:
+            data = json.load(f)
 
-        if label == "bad":
-            bad_filenames.append(filename)
-        else:
-            good_filenames.append(filename)
-
-    if len(bad_filenames) > len(good_filenames):
-        ignored_count = len(bad_filenames) - len(good_filenames)
-        print(f"Ignoring {ignored_count} vulnerable graphs.")
-        bad_filenames = bad_filenames[:len(good_filenames)]
-    elif len(good_filenames) > len(bad_filenames):
-        ignored_count = len(good_filenames) - len(bad_filenames)
-        print(f"Ignoring {ignored_count} non-vulnerable graphs.")
-        good_filenames = good_filenames[:len(bad_filenames)]
+        label = "{}:{}:{}".format(data["label"], data["cwe"], get_language(data["filePath"]))
+        labels.append(label)
 
     with open(split_file, "w") as f:
-        for index, (bad_split, good_split) in enumerate(zip(_split_subset(bad_filenames), _split_subset(good_filenames))):
-            for fold in bad_split:
-                for filename in bad_split[fold] + good_split[fold]:
+        for index, folds in enumerate(_split_subset(filenames, labels)):
+            for fold in folds:
+                for filename in folds[fold]:
                     f.write(f"{index}:{fold}:{filename}\n")
 
 
-def _split_subset(filenames):
+def _split_subset(filenames, labels):
     n_splits = 10
-    k_fold = KFold(n_splits=10)
+    k_fold = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
 
-    for train_index, test_index in k_fold.split(filenames):
-        train_index, valid_index = train_test_split(train_index, test_size=1 / (n_splits - 1))
+    for train_index, test_index in k_fold.split(filenames, labels):
+        train_labels = [labels[i] for i in train_index]
+        train_index, valid_index = train_test_split(train_index, test_size=1 / (n_splits - 1), stratify=train_labels)
 
         train = [filenames[i] for i in train_index]
         valid = [filenames[i] for i in valid_index]
         test = [filenames[i] for i in test_index]
 
-        yield {"train": train, "valid": valid, "test": test}
+        yield {DataFold.TRAIN.name: train, DataFold.VALIDATION.name: valid, DataFold.TEST.name: test}

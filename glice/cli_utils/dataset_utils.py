@@ -27,7 +27,7 @@ def load_dataset_for_prediction(trained_model_file: str):
 def get_dataset(dataset_cls: Optional[Type[GraphDataset]], split_index: int, data_dir: str, vocab_dir: str,
                 dataset_model_optimised_default_hyperparameters: Dict[str, Any],
                 loaded_data_hyperparameters: Dict[str, Any],
-                cli_data_hyperparameter_overrides: Dict[str, Any], loaded_metadata: Dict[str, Any]) -> GraphDataset:
+                cli_data_hyperparameter_overrides: Dict[str, Any], loaded_metadata: Dict[str, Any]) -> JoernDataset:
     if not dataset_cls:
         dataset_default_hyperparameter_overrides = {}
         dataset_params = JoernDataset.get_default_hyperparameters()

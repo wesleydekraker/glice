@@ -59,7 +59,7 @@ class GraphRegressionTask(GraphTaskModel):
         )
 
         self._regression_mlp = MLP(
-            out_size=1,
+            out_size=39,
             hidden_layers=self._params["regression_mlp_layers"],
             dropout_rate=self._params["regression_mlp_dropout"],
             use_biases=True,
@@ -140,4 +140,4 @@ class GraphRegressionTask(GraphTaskModel):
             graph_representations, training=training
         )  # shape: [G, 1]
 
-        return tf.squeeze(per_graph_results, axis=-1)
+        return per_graph_results
